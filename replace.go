@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package bytesreplacer
+// Package bytesreplacer provides a utility for replacing parts of byte slices.
+package bytesreplacer // import "zombiezen.com/go/bytesreplacer"
 
 import (
 	. "bytes"
