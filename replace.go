@@ -218,14 +218,6 @@ func makeGenericReplacer(oldnew []string) *genericReplacer {
 	return r
 }
 
-type appendSliceWriter []byte
-
-// Write writes to the buffer to satisfy io.Writer.
-func (w *appendSliceWriter) Write(p []byte) (int, error) {
-	*w = append(*w, p...)
-	return len(p), nil
-}
-
 func (r *genericReplacer) Replace(s []byte) []byte {
 	var last int
 	var prevMatchEmpty bool
