@@ -227,12 +227,42 @@ func (w *appendSliceWriter) Write(p []byte) (int, error) {
 }
 
 func (r *genericReplacer) Replace(s []byte) []byte {
-	if !r.hasMatch(s) {
-		return s
+	var last int
+	var prevMatchEmpty bool
+	dst := s[:0]
+	grown := false
+	for i := 0; i <= len(s); {
+		// Fast path: s[i] is not a prefix of any pattern.
+		if i != len(s) && r.root.priority == 0 {
+			index := int(r.mapping[s[i]])
+			if index == r.tableSize || r.root.table[index] == nil {
+				i++
+				continue
+			}
+		}
+
+		// Ignore the empty match iff the previous loop found the empty match.
+		val, keylen, match := r.lookup(s[i:], prevMatchEmpty)
+		prevMatchEmpty = match && keylen == 0
+		if match {
+			if len(val) > keylen && !grown {
+				grown = true
+				newDst := make([]byte, len(dst), cap(dst)+len(val)-keylen)
+				copy(newDst, dst)
+				dst = newDst
+			}
+			dst = append(dst, s[last:i]...)
+			dst = append(dst, val...)
+			i += keylen
+			last = i
+			continue
+		}
+		i++
 	}
-	buf := make(appendSliceWriter, 0, len(s))
-	r.Write(&buf, s)
-	return buf
+	if last != len(s) {
+		dst = append(dst, s[last:]...)
+	}
+	return dst
 }
 
 func (r *genericReplacer) Write(w io.Writer, s []byte) (n int, err error) {
@@ -273,27 +303,6 @@ func (r *genericReplacer) Write(w io.Writer, s []byte) (n int, err error) {
 		n += wn
 	}
 	return
-}
-
-// hasMatch reports whether there are any substrings to replace in s.
-func (r *genericReplacer) hasMatch(s []byte) bool {
-	for i := 0; i <= len(s); {
-		// Fast path: s[i] is not a prefix of any pattern.
-		if i != len(s) && r.root.priority == 0 {
-			index := int(r.mapping[s[i]])
-			if index == r.tableSize || r.root.table[index] == nil {
-				i++
-				continue
-			}
-		}
-
-		_, _, match := r.lookup(s[i:], false)
-		if match {
-			return true
-		}
-		i++
-	}
-	return false
 }
 
 // byteReplacer is the implementation that's used when all the "old"
