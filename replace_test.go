@@ -374,14 +374,24 @@ func BenchmarkHTMLEscapeNew(b *testing.B) {
 	benchmarkReplacer(b, htmlEscaper, "I <3 to escape HTML & other text too.")
 }
 
-/* DO NOT SUBMIT
 func BenchmarkHTMLEscapeOld(b *testing.B) {
 	str := "I <3 to escape HTML & other text too."
+	buf := make([]byte, len(str))
 	for i := 0; i < b.N; i++ {
-		oldHTMLEscape(str)
+		copy(buf, str)
+		oldHTMLEscape(buf)
 	}
 }
-*/
+
+// The http package's old HTML escaping function in bytes form.
+func oldHTMLEscape(s []byte) []byte {
+	s = Replace(s, []byte("&"), []byte("&amp;"), -1)
+	s = Replace(s, []byte("<"), []byte("&lt;"), -1)
+	s = Replace(s, []byte(">"), []byte("&gt;"), -1)
+	s = Replace(s, []byte(`"`), []byte("&quot;"), -1)
+	s = Replace(s, []byte("'"), []byte("&apos;"), -1)
+	return s
+}
 
 func BenchmarkByteStringReplacerWriteString(b *testing.B) {
 	str := strings.Repeat("I <3 to escape HTML & other text too.", 100)
