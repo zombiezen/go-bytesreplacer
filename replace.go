@@ -69,15 +69,15 @@ func (r *Replacer) Write(w io.Writer, s []byte) (n int, err error) {
 }
 
 type trieNode struct {
-	value    string
+	value    []byte
 	priority int
-	prefix   string
+	prefix   []byte
 	next     *trieNode
 	table    []*trieNode
 }
 
-func (t *trieNode) add(key, val string, priority int, r *genericReplacer) {
-	if key == "" {
+func (t *trieNode) add(key, val []byte, priority int, r *genericReplacer) {
+	if len(key) == 0 {
 		if t.priority == 0 {
 			t.value = val
 			t.priority = priority
@@ -85,7 +85,7 @@ func (t *trieNode) add(key, val string, priority int, r *genericReplacer) {
 		return
 	}
 
-	if t.prefix != "" {
+	if len(t.prefix) > 0 {
 		// Need to split the prefix among multiple nodes.
 		var n int // length of the longest common prefix
 		for ; n < len(t.prefix) && n < len(key); n++ {
@@ -112,7 +112,7 @@ func (t *trieNode) add(key, val string, priority int, r *genericReplacer) {
 			t.table = make([]*trieNode, r.tableSize)
 			t.table[r.mapping[t.prefix[0]]] = prefixNode
 			t.table[r.mapping[key[0]]] = keyNode
-			t.prefix = ""
+			t.prefix = nil
 			t.next = nil
 			keyNode.add(key[1:], val, priority, r)
 		} else {
@@ -135,7 +135,7 @@ func (t *trieNode) add(key, val string, priority int, r *genericReplacer) {
 	} else {
 		t.prefix = key
 		t.next = new(trieNode)
-		t.next.add("", val, priority, r)
+		t.next.add(nil, val, priority, r)
 	}
 }
 
@@ -148,7 +148,7 @@ func (r *genericReplacer) lookup(s []byte, ignoreRoot bool) (val []byte, keylen 
 	for node != nil {
 		if node.priority > bestPriority && !(ignoreRoot && node == &r.root) {
 			bestPriority = node.priority
-			val = []byte(node.value)
+			val = node.value
 			keylen = n
 			found = true
 		}
@@ -164,7 +164,7 @@ func (r *genericReplacer) lookup(s []byte, ignoreRoot bool) (val []byte, keylen 
 			node = node.table[index]
 			s = s[1:]
 			n++
-		} else if node.prefix != "" && HasPrefix(s, []byte(node.prefix)) {
+		} else if len(node.prefix) > 0 && HasPrefix(s, node.prefix) {
 			n += len(node.prefix)
 			s = s[len(node.prefix):]
 			node = node.next
@@ -213,7 +213,7 @@ func makeGenericReplacer(oldnew []string) *genericReplacer {
 	r.root.table = make([]*trieNode, r.tableSize)
 
 	for i := 0; i < len(oldnew); i += 2 {
-		r.root.add(oldnew[i], oldnew[i+1], len(oldnew)-i, r)
+		r.root.add([]byte(oldnew[i]), []byte(oldnew[i+1]), len(oldnew)-i, r)
 	}
 	return r
 }
