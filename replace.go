@@ -6,6 +6,8 @@
 package bytesreplacer // import "zombiezen.com/go/bytesreplacer"
 
 import (
+	"io"
+
 	"go4.org/bytereplacer"
 )
 
@@ -19,4 +21,12 @@ type Replacer struct {
 // Replacements are performed in order, without overlapping matches.
 func New(oldnew ...string) *Replacer {
 	return &Replacer{bytereplacer.New(oldnew...)}
+}
+
+// Write writes s to w with all replacements performed.
+func (r *Replacer) Write(w io.Writer, s []byte) (n int, err error) {
+	ss := make([]byte, len(s))
+	copy(ss, s)
+	ss = r.Replace(ss)
+	return w.Write(ss)
 }
